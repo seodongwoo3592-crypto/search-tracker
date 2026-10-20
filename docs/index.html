@@ -340,7 +340,7 @@ var nf = new Intl.NumberFormat('ko-KR');
 var nf1 = new Intl.NumberFormat('ko-KR',{ maximumFractionDigits:1, minimumFractionDigits:1 });
 var nfc;
 try { nfc = new Intl.NumberFormat('ko-KR',{ notation:'compact', maximumFractionDigits:1 }); } catch(e){ nfc = nf; }
-function fmtVal(v, metric){ if (v == null || isNaN(v)) return '—'; return metric === 'index' ? nf1.format(v) : nf.format(Math.round(v)); }
+function fmtVal(v, metric){ if (v == null || isNaN(v)) return '—'; return nf.format(Math.round(v)); }
 function unitWord(metric){ return metric === 'index' ? '' : '회'; }
 function pct(v){ return (Math.round(v*10)/10).toFixed(Math.abs(v) >= 10 ? 0 : 1) + '%'; }
 
