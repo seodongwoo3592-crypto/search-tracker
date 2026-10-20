@@ -94,6 +94,11 @@ main.wrap{padding-top:24px;padding-bottom:64px;display:flex;flex-direction:colum
 .cards.n3{grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))}
 .card{position:relative;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;min-width:0;transition:opacity .2s,border-color .2s}
 button.card{cursor:pointer;width:100%}
+.cards-hint{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);margin:0 0 -12px;min-height:30px}
+.card{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.card.dragging{z-index:40;cursor:grabbing;box-shadow:0 14px 34px rgba(0,0,0,.18);border-color:color-mix(in srgb,var(--text) 30%,var(--line));opacity:.97;transition:none}
+body.is-dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
+body.is-dragging .card:not(.dragging){transition:transform .15s}
 button.card:hover{border-color:color-mix(in srgb,var(--text) 22%,var(--line))}
 .card.off{opacity:.45}
 .card .head{display:flex;align-items:center;gap:8px;min-width:0}
@@ -254,6 +259,7 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
     </div>
   </section>
 
+  <div id="cardsHint" class="cards-hint" hidden><span>카드를 끌어서 순서를 바꿀 수 있어요 · 폰은 길게 누른 뒤 끌기</span><button id="resetOrder" type="button" class="btn small ghost" hidden>원래 순서로</button></div>
   <section id="cards" class="cards" aria-label="브랜드 카드"></section>
 
   <section class="panel">
@@ -297,7 +303,7 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
 
 /* ---------- 기본값 ---------- */
 var PALETTE = ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#6250d6','#e34948'];
-var LS = { unit:'st_unit', range:'st_range', metric:'st_metric', hidden:'st_hidden', token:'st_token', repo:'st_repo', pending:'st_pending' };
+var LS = { unit:'st_unit', range:'st_range', metric:'st_metric', hidden:'st_hidden', token:'st_token', repo:'st_repo', pending:'st_pending', order:'st_order' };
 var WORKFLOW = 'collect.yml';
 var POLL_MS = 15000;
 var MAX_KW = 20;
@@ -389,13 +395,22 @@ function unitName(unit){ return unit === 'day' ? '일' : unit === 'week' ? '주'
 
 /* ---------- 브랜드 목록(설정 순서) ---------- */
 function pending(){ return lsJSON(LS.pending); }
-function viewGroups(){
+function baseGroups(){
   var p = pending();
   if (p && p.groups && DATA && !DATA.demo) return p.groups;
   return (DATA && DATA.groups) || [];
 }
+/* 화면에 보이는 순서: 사용자가 카드를 끌어서 정한 순서(이 브라우저에 저장). 색은 설정 순서 그대로 */
+function savedOrder(){ var o = lsJSON(LS.order); return Array.isArray(o) ? o : []; }
+function viewGroups(){
+  var base = baseGroups(), o = savedOrder();
+  if (!o.length) return base;
+  var pos = {}; o.forEach(function(id, i){ pos[id] = i; });
+  var rank = function(g){ return (g.id in pos) ? pos[g.id] : 100000 + base.indexOf(g); };
+  return base.slice().sort(function(a, b){ return rank(a) - rank(b); });
+}
 function colorOf(id){
-  var gs = viewGroups();
+  var gs = baseGroups();
   for (var i=0;i<gs.length;i++) if (gs[i].id === id) return PALETTE[i % PALETTE.length];
   return PALETTE[0];
 }
@@ -571,10 +586,12 @@ function sparkSVG(values, color){
 }
 function renderCards(){
   var box = $('cards');
-  if (LOAD_ERROR){ box.innerHTML = ''; box.hidden = true; return; }
+  if (LOAD_ERROR){ box.innerHTML = ''; box.hidden = true; $('cardsHint').hidden = true; return; }
   box.hidden = false;
   var gs = viewGroups();
   box.className = 'cards' + (gs.length <= 3 ? ' n' + Math.max(1, gs.length) : '');
+  $('cardsHint').hidden = gs.length < 2;
+  $('resetOrder').hidden = !savedOrder().length;
   var done = allPeriods(state.unit).filter(function(k){ return isDone(k, state.unit); });
   var last = done[done.length-1], prev = done[done.length-2], spark = done.slice(-12);
   var p = pending();
@@ -582,12 +599,12 @@ function renderCards(){
     var color = colorOf(g.id);
     var head = '<div class="head"><i class="dot" style="background:' + color + '"></i><span class="name">' + esc(g.name) + '</span>' + (g.is_mine && g.name !== '내 브랜드' ? '<span class="mine">내 브랜드</span>' : '');
     if (!g.keywords || !g.keywords.length){
-      return '<div class="card empty">' + head + '</div><p>아직 검색어가 없어서 수집하지 않아요.</p>' +
+      return '<div class="card empty" data-id="' + esc(g.id) + '">' + head + '</div><p>아직 검색어가 없어서 수집하지 않아요.</p>' +
         (DATA.demo ? '' : '<button type="button" class="btn small" data-reg="' + esc(g.id) + '">검색어 등록</button>') + '</div>';
     }
     if (!hasSeries(g.id)){
       var waiting = p && !DATA.demo;
-      return '<div class="card empty collecting">' + head + '</div><p><span class="pulse"></span> 데이터를 모으는 중이에요. ' + (waiting ? '수집이 끝나면 자동으로 나타나요.' : '다음 수집 때 나타나요.') + '</p></div>';
+      return '<div class="card empty collecting" data-id="' + esc(g.id) + '">' + head + '</div><p><span class="pulse"></span> 데이터를 모으는 중이에요. ' + (waiting ? '수집이 끝나면 자동으로 나타나요.' : '다음 수집 때 나타나요.') + '</p></div>';
     }
     var v = last ? valueAt(g.id, last) : null, pv = prev ? valueAt(g.id, prev) : null;
     var badge = '';
@@ -605,7 +622,7 @@ function renderCards(){
       ? '<div class="kv"><span>모바일 ' + pct(mo/(pc+mo)*100) + '</span><span>PC ' + pct(pc/(pc+mo)*100) + '</span></div><div class="mpbar" aria-hidden="true"><span style="width:' + (mo/(pc+mo)*100) + '%;background:' + color + '"></span><span style="width:' + (pc/(pc+mo)*100) + '%;background:' + color + ';opacity:.3"></span></div>'
       : '';
     var off = !!state.hidden[g.id];
-    return '<button type="button" class="card' + (off ? ' off' : '') + '" data-toggle="' + esc(g.id) + '" aria-pressed="' + (!off) + '" title="누르면 그래프에서 ' + (off ? '다시 보여요' : '숨겨요') + '">' +
+    return '<button type="button" class="card' + (off ? ' off' : '') + '" data-id="' + esc(g.id) + '" data-toggle="' + esc(g.id) + '" aria-pressed="' + (!off) + '" title="누르면 그래프에서 ' + (off ? '다시 보여요' : '숨겨요') + ' · 끌면 순서를 바꿔요">' +
       head + '<span class="eye">' + (off ? '숨김' : '') + '</span></div>' +
       '<div class="big num">' + fmtVal(v, state.metric) + '<small>' + (state.metric === 'index' ? '지수' : '회') + '</small></div>' +
       '<div class="row"><span>' + (last ? longLabel(last, state.unit) : '') + '</span>' + badge + (badge ? '<span>' + prevWord(state.unit) + ' 대비</span>' : '') + '</div>' +
@@ -615,6 +632,7 @@ function renderCards(){
   }).join('');
 }
 $('cards').addEventListener('click', function(e){
+  if (swallowClick){ swallowClick = false; e.preventDefault(); return; }
   var reg = e.target.closest('[data-reg]');
   if (reg){ openManager({ edit: reg.getAttribute('data-reg') }); return; }
   var c = e.target.closest('[data-toggle]');
@@ -628,6 +646,73 @@ function toggleBrand(id){
     chart.update();
   }
 }
+
+/* ---------- 카드 끌어서 순서 바꾸기 ----------
+   PC: 카드를 누른 채 끌기 / 폰: 길게(0.35초) 누른 뒤 끌기. 짧게 누르면 지금처럼 그래프에서 숨기기 */
+var drag = null, swallowClick = false;
+function cardEls(){ return Array.prototype.slice.call($('cards').querySelectorAll('.card[data-id]')); }
+$('cards').addEventListener('pointerdown', function(e){
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  var card = e.target.closest('.card[data-id]'); if (!card) return;
+  var btn = e.target.closest('button'); if (btn && btn !== card) return;   // 카드 안 '검색어 등록' 버튼은 제외
+  if (cardEls().length < 2) return;
+  drag = { card:card, pid:e.pointerId, sx:e.clientX, sy:e.clientY, x:e.clientX, y:e.clientY, started:false, touch:e.pointerType !== 'mouse', timer:null, tx:0, ty:0 };
+  if (drag.touch) drag.timer = setTimeout(function(){ if (drag && !drag.started) beginDrag(); }, 350);
+});
+function beginDrag(){
+  var c = drag.card, r = c.getBoundingClientRect();
+  drag.started = true; drag.offX = drag.x - r.left; drag.offY = drag.y - r.top;
+  c.classList.add('dragging'); document.body.classList.add('is-dragging');
+  try { if (drag.touch && navigator.vibrate) navigator.vibrate(12); } catch(_){}
+}
+function moveDrag(){
+  var c = drag.card, x = drag.x, y = drag.y;
+  var hit = null;
+  cardEls().forEach(function(o){
+    if (o === c) return;
+    var r = o.getBoundingClientRect();
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) hit = o;
+  });
+  if (hit){
+    var list = cardEls();
+    if (list.indexOf(hit) > list.indexOf(c)) hit.after(c); else hit.before(c);
+  }
+  var r2 = c.getBoundingClientRect();
+  var baseL = r2.left - drag.tx, baseT = r2.top - drag.ty;
+  drag.tx = x - drag.offX - baseL; drag.ty = y - drag.offY - baseT;
+  c.style.transform = 'translate(' + drag.tx + 'px,' + drag.ty + 'px)';
+}
+document.addEventListener('pointermove', function(e){
+  if (!drag || e.pointerId !== drag.pid) return;
+  drag.x = e.clientX; drag.y = e.clientY;
+  var dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+  if (!drag.started){
+    if (drag.touch){ if (Math.abs(dx) > 8 || Math.abs(dy) > 8){ clearTimeout(drag.timer); drag = null; } return; }
+    if (Math.abs(dx) + Math.abs(dy) < 6) return;
+    beginDrag();
+  }
+  e.preventDefault();
+  moveDrag();
+});
+function endDrag(cancel){
+  if (!drag) return;
+  clearTimeout(drag.timer);
+  var d = drag; drag = null;
+  if (!d.started) return;
+  d.card.classList.remove('dragging'); document.body.classList.remove('is-dragging');
+  d.card.style.transform = '';
+  swallowClick = true; setTimeout(function(){ swallowClick = false; }, 60);
+  var ids = cardEls().map(function(el){ return el.getAttribute('data-id'); });
+  var before = viewGroups().map(function(g){ return g.id; });
+  if (!cancel && ids.join('|') !== before.join('|')){ lsSet(LS.order, JSON.stringify(ids)); }
+  renderAll();
+}
+document.addEventListener('pointerup', function(e){ if (drag && e.pointerId === drag.pid) endDrag(false); });
+document.addEventListener('pointercancel', function(e){ if (drag && e.pointerId === drag.pid) endDrag(!drag.started); });
+document.addEventListener('touchmove', function(e){ if (drag && drag.started) e.preventDefault(); }, { passive:false });
+document.addEventListener('contextmenu', function(e){ if (drag) e.preventDefault(); });
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && drag && drag.started) endDrag(true); });
+$('resetOrder').addEventListener('click', function(){ lsSet(LS.order, null); renderAll(); });
 
 /* ---------- 그래프 ---------- */
 function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
