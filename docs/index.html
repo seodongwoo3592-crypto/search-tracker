@@ -233,7 +233,7 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
       </div></div>
     <div class="ctl range"><span class="ctl-label" id="lblRange">기간</span>
       <div class="seg" role="group" aria-labelledby="lblRange" data-key="range">
-        <button type="button" data-v="3m">3개월</button><button type="button" data-v="6m">6개월</button><button type="button" data-v="1y">1년</button><button type="button" data-v="all">전체</button>
+        <button type="button" data-v="1m">1개월</button><button type="button" data-v="3m">3개월</button><button type="button" data-v="6m">6개월</button><button type="button" data-v="1y">1년</button><button type="button" data-v="all">전체</button>
       </div></div>
     <div class="ctl metric"><span class="ctl-label" id="lblMetric">지표</span>
       <div class="seg" role="group" aria-labelledby="lblMetric" data-key="metric">
@@ -274,7 +274,7 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
     <h2>숫자는 이렇게 만들어요</h2>
     <p class="sub">네이버가 공개하는 두 가지 자료를 합쳐 하루 검색 수를 추정해요.</p>
     <ol>
-      <li><b>트렌드 지수</b> — 네이버 데이터랩 검색어 트렌드 값이에요. 브랜드마다 따로 조회해서 <b>그 브랜드가 가장 많이 검색된 날을 100</b>으로 둔 상대값이라, 브랜드끼리 크기를 견줄 수는 없고 각자의 흐름만 볼 수 있어요. 응답에 값이 없는 날은 0으로 채워요.</li>
+      <li><b>트렌드 지수</b> — 네이버 데이터랩 검색어 트렌드 값이에요. 데이터랩과 같은 방식으로, <b>선택한 기간 안에서 그 브랜드가 가장 많이 검색된 일·주·월을 100</b>으로 둔 상대값이에요. 기간이나 단위를 바꾸면 100의 기준도 함께 바뀌어요. 브랜드마다 따로 계산해서 브랜드끼리 크기를 견줄 수는 없고 각자의 흐름만 볼 수 있어요. 응답에 값이 없는 날은 0으로 채워요.</li>
       <li><b>실제 검색 수</b> — 네이버 검색광고 키워드 도구가 알려 주는 <b>최근 30일 검색 수(PC+모바일)</b>예요. ‘10 미만’으로 나오는 값은 5로 계산하고, 띄어쓰기만 다른 검색어는 한 번만 세요.</li>
       <li><b>추정 검색 수</b> — <span class="formula">그날 지수 × (최근 30일 실제 검색 수 ÷ 최근 30일 지수 합)</span>. 그래서 최근 30일 합계는 실제 검색 수와 같고, 그보다 앞의 값은 같은 비율로 거슬러 계산한 추정치예요.</li>
       <li><b>기간</b> — 주는 월요일부터 일요일까지예요. 요약·카드·그래프는 다 끝난 기간만 쓰고, 아직 진행 중인 이번 기간은 표에만 ‘진행 중’으로 보여 줘요.</li>
@@ -409,7 +409,7 @@ function aggregate(id, unit){
     if (r[2] == null) b.cntOk = false; else b.cnt += +r[2];
   }
   var out = {};
-  order.forEach(function(k){ var b = m[k]; out[k] = { index: b.n ? b.idx / b.n : null, count: b.cntOk ? b.cnt : null }; });
+  order.forEach(function(k){ var b = m[k]; out[k] = { index: b.n ? b.idx : null, count: b.cntOk ? b.cnt : null }; });
   aggCache[ck] = { map:out, keys:order };
   return aggCache[ck];
 }
@@ -420,10 +420,30 @@ function allPeriods(unit){
   return keys;
 }
 function isDone(k, unit){ return periodEnd(k, unit) <= DATA.range[1]; }
-function valueAt(id, k){ if (!hasSeries(id)) return null; var a = aggregate(id, state.unit).map[k]; return a ? a[state.metric] : null; }
+function rawAt(id, k){ if (!hasSeries(id)) return null; var a = aggregate(id, state.unit).map[k]; return a ? a[state.metric] : null; }
+/* 트렌드 지수: 데이터랩처럼 '선택한 기간(끝난 기간) 안의 최고치 = 100'으로 다시 맞춘다.
+   기간 합계를 쓰므로 주·월 단위도 데이터랩의 주별·월별 값과 같은 방식이다. */
+var peakCache = {};
+function periodPeak(id){
+  var ck = id + '|' + state.unit + '|' + state.range;
+  if (ck in peakCache) return peakCache[ck];
+  var cut = rangeCutoff(), mx = 0;
+  aggregate(id, state.unit).keys.forEach(function(k){
+    if (!isDone(k, state.unit) || (cut && k < cut)) return;
+    var v = aggregate(id, state.unit).map[k].index; if (v > mx) mx = v;
+  });
+  peakCache[ck] = mx;
+  return mx;
+}
+function valueAt(id, k){
+  var v = rawAt(id, k);
+  if (v == null || state.metric !== 'index') return v;
+  var pk = periodPeak(id);
+  return pk > 0 ? v / pk * 100 : 0;
+}
 function rangeCutoff(){
   if (state.range === 'all') return null;
-  var months = state.range === '3m' ? 3 : state.range === '6m' ? 6 : 12;
+  var months = state.range === '1m' ? 1 : state.range === '3m' ? 3 : state.range === '6m' ? 6 : 12;
   var d = toD(DATA.range[1]); d.setUTCMonth(d.getUTCMonth() - months); d.setUTCDate(d.getUTCDate()+1);
   return periodKey(iso(d), state.unit);
 }
@@ -432,7 +452,7 @@ function rangeCutoff(){
 function loadPrefs(){
   var u = lsGet(LS.unit), r = lsGet(LS.range), m = lsGet(LS.metric), h = lsJSON(LS.hidden);
   if (['day','week','month'].indexOf(u) >= 0) state.unit = u;
-  if (['3m','6m','1y','all'].indexOf(r) >= 0) state.range = r;
+  if (['1m','3m','6m','1y','all'].indexOf(r) >= 0) state.range = r;
   if (['count','index'].indexOf(m) >= 0) state.metric = m;
   if (h && typeof h === 'object') state.hidden = h;
 }
@@ -504,7 +524,7 @@ function renderSummary(){
   if (state.metric === 'index'){
     txt.textContent = label + ' 기준 브랜드별 트렌드 지수예요.';
     note.hidden = false;
-    note.textContent = '트렌드 지수는 브랜드마다 자기 최고치를 100으로 둔 값이라 브랜드끼리 크기를 비교할 수 없어요. 각 브랜드가 오르는지 내리는지만 보세요.';
+    note.textContent = '데이터랩처럼 선택한 기간(' + ({'1m':'최근 1개월','3m':'최근 3개월','6m':'최근 6개월','1y':'최근 1년','all':'전체'})[state.range] + ') 안에서 브랜드마다 가장 많이 검색된 ' + ({day:'날',week:'주',month:'달'})[state.unit] + '을 100으로 둔 값이에요. 브랜드끼리 크기는 비교할 수 없으니, 크기 비교는 ‘검색 수’로 보세요.';
     return;
   }
   var vals = gs.map(function(g){ return { g:g, v: valueAt(g.id, k) }; }).filter(function(x){ return x.v != null; });
@@ -618,7 +638,7 @@ function renderChart(){
   var gs = chartGroups();
   var cut = rangeCutoff();
   var keys = allPeriods(state.unit).filter(function(k){ return isDone(k, state.unit) && (!cut || k >= cut); });
-  $('chartSub').textContent = (state.metric === 'index' ? '트렌드 지수(브랜드별 최고치=100)' : '추정 검색 수') + ' · ' + unitName(state.unit) + ' 단위 · 끝난 기간만 보여 줘요.';
+  $('chartSub').textContent = (state.metric === 'index' ? '트렌드 지수(선택한 기간의 브랜드별 최고치=100, 데이터랩과 같은 방식)' : '추정 검색 수') + ' · ' + unitName(state.unit) + ' 단위 · 끝난 기간만 보여 줘요.';
   if (!gs.length || !keys.length){ empty.hidden = false; empty.textContent = '아직 그릴 데이터가 없어요.'; return; }
   if (typeof window.Chart !== 'function'){ empty.hidden = false; empty.textContent = '그래프 도구를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.'; return; }
   empty.hidden = true;
@@ -993,7 +1013,7 @@ function commitChange(ch, retried){
     var since = new Date().toISOString();
     lsSet(LS.pending, JSON.stringify({ since: since, groups: cfgOut.groups, runId: null, done: false }));
     M.cfg = cfgOut; M.form = null; M.confirmDel = null;
-    aggCache = {}; renderAll();
+    aggCache = {}; peakCache = {}; renderAll();
     banner('info', '설정을 저장했어요. 수집을 시작하는 중이에요…', { spin:true });
     return gh('POST', '/actions/workflows/' + WORKFLOW + '/dispatches', { ref:'main' }).then(function(){ return true; }, function(e){
       banner('warn', '설정은 저장했지만 수집을 바로 시작하지 못했어요. ' + esc(e.message) + ' 내일 오전 9시 자동 수집 때 반영되거나, <a href="' + esc(repoUrl()) + '/actions" target="_blank" rel="noopener">Actions</a>에서 직접 실행할 수 있어요.', { close:true });
@@ -1035,7 +1055,7 @@ function pollOnce(){
     p = pending(); if (!p) return;
     var fresh = d && d.updated_at && new Date(d.updated_at).getTime() >= since - 5000;
     if (fresh){
-      DATA = d; LOAD_ERROR = null; aggCache = {};
+      DATA = d; LOAD_ERROR = null; aggCache = {}; peakCache = {};
       var missing = p.groups.filter(function(g){ return g.keywords && g.keywords.length && !(d.series[g.id] && d.series[g.id].length); });
       lsSet(LS.pending, null);
       renderAll();
