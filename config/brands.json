@@ -3,9 +3,11 @@
   "groups": [
     {
       "id": "mine",
-      "name": "내 브랜드",
+      "name": "엑스노이",
       "is_mine": true,
-      "keywords": []
+      "keywords": [
+        "엑스노이"
+      ]
     },
     {
       "id": "rival1",
