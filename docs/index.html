@@ -342,7 +342,7 @@ var nfc;
 try { nfc = new Intl.NumberFormat('ko-KR',{ notation:'compact', maximumFractionDigits:1 }); } catch(e){ nfc = nf; }
 function fmtVal(v, metric){ if (v == null || isNaN(v)) return '—'; return nf.format(Math.round(v)); }
 function unitWord(metric){ return metric === 'index' ? '' : '회'; }
-function pct(v){ return (Math.round(v*10)/10).toFixed(Math.abs(v) >= 10 ? 0 : 1) + '%'; }
+function pct(v){ if (v > 0 && v < 0.5) return '1% 미만'; return Math.round(v) + '%'; }
 
 /* ---------- 날짜 ---------- */
 function toD(s){ return new Date(s + 'T00:00:00Z'); }
@@ -368,11 +368,21 @@ function longLabel(k, unit){
   }
   return d.getUTCFullYear() + '년 ' + (d.getUTCMonth()+1) + '월';
 }
+function p2(n){ return (n < 10 ? '0' : '') + n; }
+function dotDate(s){ var d = toD(s); return d.getUTCFullYear() + '.' + p2(d.getUTCMonth()+1) + '.' + p2(d.getUTCDate()); }
+/* 그래프 툴팁용: 2026.10.14 (수) / 2026.10.12~2026.10.18 / 2026.10 */
+function tipLabel(k, unit){
+  var d = toD(k);
+  if (unit === 'day') return dotDate(k) + ' (' + DOW[d.getUTCDay()] + ')';
+  if (unit === 'week') return dotDate(k) + '~' + dotDate(addDays(k, 6));
+  return d.getUTCFullYear() + '.' + p2(d.getUTCMonth()+1);
+}
+/* 그래프 가로축: 일·주는 09.21, 월은 09 (전체 기간이면 앞에 연도) */
 function shortLabel(k, unit){
-  var d = toD(k), y = String(d.getUTCFullYear()).slice(2), m = d.getUTCMonth()+1, dd = d.getUTCDate();
-  if (unit === 'month') return y + '.' + (m<10?'0':'') + m;
-  var multiYear = toD(DATA.range[0]).getUTCFullYear() !== toD(DATA.range[1]).getUTCFullYear();
-  return (multiYear && (state.range === 'all' || state.range === '1y') ? y + '.' : '') + m + '.' + dd;
+  var d = toD(k), y = String(d.getUTCFullYear()).slice(2), m = p2(d.getUTCMonth()+1), dd = p2(d.getUTCDate());
+  var withYear = state.range === 'all';
+  if (unit === 'month') return withYear ? y + '.' + m : m;
+  return (withYear ? y + '.' : '') + m + '.' + dd;
 }
 function prevWord(unit){ return unit === 'day' ? '전일' : unit === 'week' ? '전주' : '전월'; }
 function unitName(unit){ return unit === 'day' ? '일' : unit === 'week' ? '주' : '월'; }
@@ -643,7 +653,6 @@ function renderChart(){
   if (typeof window.Chart !== 'function'){ empty.hidden = false; empty.textContent = '그래프 도구를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.'; return; }
   empty.hidden = true;
   var text = cssVar('--muted'), grid = cssVar('--line'), surface = cssVar('--surface'), body = cssVar('--text');
-  var dense = keys.length > 60;
   chart = new window.Chart($('chart'), {
     type:'line',
     data:{
@@ -651,7 +660,7 @@ function renderChart(){
       datasets: gs.map(function(g){
         var c = colorOf(g.id);
         return { _id:g.id, label:g.name, data: keys.map(function(k){ return valueAt(g.id, k); }), borderColor:c, backgroundColor:c, pointBackgroundColor:c,
-          borderWidth:2, pointRadius: dense ? 0 : 2.5, pointHoverRadius:4, tension:.25, spanGaps:true, hidden: !!state.hidden[g.id] };
+          borderWidth:2, pointRadius:0, pointHoverRadius:5, pointHitRadius:8, tension:0, spanGaps:true, hidden: !!state.hidden[g.id] };
       })
     },
     options:{
@@ -665,14 +674,14 @@ function renderChart(){
           titleFont:{ family:'Pretendard Variable, sans-serif', weight:'700', size:14 }, bodyFont:{ family:'Pretendard Variable, sans-serif', size:14 },
           itemSort:function(a,b){ return (b.parsed.y||0) - (a.parsed.y||0); },
           callbacks:{
-            title:function(items){ return items.length ? longLabel(keys[items[0].dataIndex], state.unit) : ''; },
-            label:function(it){ return ' ' + it.dataset.label + '  ' + fmtVal(it.parsed.y, state.metric) + unitWord(state.metric); }
+            title:function(items){ return items.length ? tipLabel(keys[items[0].dataIndex], state.unit) : ''; },
+            label:function(it){ return ' ' + it.dataset.label + '   ' + fmtVal(it.parsed.y, state.metric); }
           }
         }
       },
       scales:{
         x:{ grid:{ display:false }, border:{ color:grid }, ticks:{ color:text, maxRotation:0, autoSkip:true, maxTicksLimit: window.innerWidth < 500 ? 5 : 9, font:{ size:12 } } },
-        y:{ beginAtZero:true, grid:{ color:grid }, border:{ display:false }, ticks:{ color:text, maxTicksLimit:6, font:{ size:12 }, callback:function(v){ return state.metric === 'index' ? v : nfc.format(v); } } }
+        y:{ beginAtZero:true, grid:{ color:grid }, border:{ display:false }, ticks:{ color:text, maxTicksLimit:6, precision:0, font:{ size:12 }, callback:function(v){ return nf.format(Math.round(v)); } } }
       }
     }
   });
