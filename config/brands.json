@@ -1,0 +1,23 @@
+{
+  "start_date": "2016-01-01",
+  "groups": [
+    {
+      "id": "mine",
+      "name": "내 브랜드",
+      "is_mine": true,
+      "keywords": []
+    },
+    {
+      "id": "rival1",
+      "name": "경쟁사1",
+      "is_mine": false,
+      "keywords": []
+    },
+    {
+      "id": "rival2",
+      "name": "경쟁사2",
+      "is_mine": false,
+      "keywords": []
+    }
+  ]
+}
