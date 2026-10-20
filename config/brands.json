@@ -19,9 +19,11 @@
     },
     {
       "id": "rival2",
-      "name": "경쟁사2",
+      "name": "곰베진",
       "is_mine": false,
-      "keywords": []
+      "keywords": [
+        "곰베진"
+      ]
     }
   ]
 }
