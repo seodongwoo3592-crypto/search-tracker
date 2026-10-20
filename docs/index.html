@@ -88,36 +88,36 @@ main.wrap{padding-top:24px;padding-bottom:64px;display:flex;flex-direction:colum
 .dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
 
 /* 카드 */
-.cards{display:grid;gap:var(--gap);grid-template-columns:repeat(auto-fill,minmax(max(230px,calc((100% - 3 * var(--gap)) / 4)),1fr))}
-.cards.n1{grid-template-columns:minmax(0,1fr)}
-.cards.n2{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
-.cards.n3{grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr))}
-.card{position:relative;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;min-width:0;transition:opacity .2s,border-color .2s}
+.cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(max(150px,calc((100% - 5 * 12px) / 6)),1fr))}
+.card{position:relative;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:7px;min-width:0;transition:opacity .2s,border-color .2s}
 button.card{cursor:pointer;width:100%}
-.cards-hint{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);margin:0 0 -12px;min-height:30px}
+.cards-hint{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;font-size:13px;color:var(--muted);margin:0 0 -14px;min-height:30px}
+.cards-hint .period{font-weight:600;color:var(--text)}
+.cards-hint .drag-tip{margin-left:auto}
 .card{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .card.dragging{z-index:40;cursor:grabbing;box-shadow:0 14px 34px rgba(0,0,0,.18);border-color:color-mix(in srgb,var(--text) 30%,var(--line));opacity:.97;transition:none}
 body.is-dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
 body.is-dragging .card:not(.dragging){transition:transform .15s}
 button.card:hover{border-color:color-mix(in srgb,var(--text) 22%,var(--line))}
 .card.off{opacity:.45}
-.card .head{display:flex;align-items:center;gap:8px;min-width:0}
-.card .name{font-weight:700;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.card .mine{font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 7px;flex:none}
-.card .eye{margin-left:auto;font-size:12px;color:var(--muted);flex:none}
-.card .big{font-size:30px;font-weight:700;line-height:1.15;letter-spacing:-.02em}
-.card .big small{font-size:16px;font-weight:600;margin-left:2px;color:var(--muted)}
-.card .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.card .head{display:flex;align-items:center;gap:6px;min-width:0}
+.card .name{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.card .mine{font-size:11px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 6px;flex:none;line-height:1.6}
+.card .eye{margin-left:auto;font-size:11px;color:var(--muted);flex:none}
+.card .big{font-size:24px;font-weight:700;line-height:1.15;letter-spacing:-.02em;white-space:nowrap}
+.card .big small{font-size:13px;font-weight:600;margin-left:2px;color:var(--muted)}
+.card .row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.card .badge{font-size:12px;padding:1px 7px}
 .badge{display:inline-flex;align-items:center;gap:2px;font-size:13px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--text)}
 .badge.up{background:var(--up)}
 .badge.down{background:var(--down)}
-.spark{width:100%;height:40px;display:block}
-.kv{display:flex;justify-content:space-between;gap:8px;font-size:14px;color:var(--muted)}
+.spark{width:100%;height:30px;display:block}
+.kv{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap}
 .kv b{color:var(--text);font-weight:600}
-.mpbar{display:flex;height:6px;border-radius:999px;overflow:hidden;background:var(--soft)}
+.mpbar{display:flex;height:5px;border-radius:999px;overflow:hidden;background:var(--soft)}
 .mpbar span{height:100%}
 .card.empty{border-style:dashed;background:transparent;box-shadow:none;align-items:flex-start}
-.card.empty p{margin:0;font-size:14px;color:var(--muted);word-break:keep-all}
+.card.empty p{margin:0;font-size:12px;color:var(--muted);word-break:keep-all}
 .card.collecting .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
 
@@ -201,8 +201,9 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
   main.wrap{padding-top:16px;gap:16px}
   .panel{padding:18px 16px}
   .summary-text{font-size:18px}
-  .card{padding:16px}
-  .card .big{font-size:26px}
+  .card{padding:12px}
+  .card .big{font-size:22px}
+  .cards-hint .drag-tip{margin-left:0}
   .chart-box{height:300px}
   .overlay{align-items:flex-end;padding:0}
   .sheet{width:100%;max-height:92vh;border-radius:20px 20px 0 0;padding-bottom:env(safe-area-inset-bottom)}
@@ -259,7 +260,7 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
     </div>
   </section>
 
-  <div id="cardsHint" class="cards-hint" hidden><span>카드를 끌어서 순서를 바꿀 수 있어요 · 폰은 길게 누른 뒤 끌기</span><button id="resetOrder" type="button" class="btn small ghost" hidden>원래 순서로</button></div>
+  <div id="cardsHint" class="cards-hint" hidden><span id="cardsPeriod" class="period"></span><span id="dragTip" class="drag-tip">끌어서 순서 바꾸기 · 폰은 길게 누른 뒤 끌기</span><button id="resetOrder" type="button" class="btn small ghost" hidden>원래 순서로</button></div>
   <section id="cards" class="cards" aria-label="브랜드 카드"></section>
 
   <section class="panel">
@@ -269,12 +270,6 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
     <div class="chart-box"><canvas id="chart" aria-label="브랜드별 검색 추이 그래프"></canvas><div id="chartEmpty" class="chart-empty" hidden></div></div>
   </section>
 
-  <section class="panel">
-    <h2>기간별 표</h2>
-    <p id="tableSub" class="sub">최근 12기간</p>
-    <p id="scrollHint" class="scroll-hint" hidden>← 표를 옆으로 밀어서 다른 브랜드를 보세요</p>
-    <div id="tableWrap" class="table-wrap"></div>
-  </section>
 
   <section class="panel explain">
     <h2>숫자는 이렇게 만들어요</h2>
@@ -283,7 +278,7 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
       <li><b>트렌드 지수</b> — 네이버 데이터랩 검색어 트렌드 값이에요. 데이터랩과 같은 방식으로, <b>선택한 기간 안에서 그 브랜드가 가장 많이 검색된 일·주·월을 100</b>으로 둔 상대값이에요. 기간이나 단위를 바꾸면 100의 기준도 함께 바뀌어요. 브랜드마다 따로 계산해서 브랜드끼리 크기를 견줄 수는 없고 각자의 흐름만 볼 수 있어요. 응답에 값이 없는 날은 0으로 채워요.</li>
       <li><b>실제 검색 수</b> — 네이버 검색광고 키워드 도구가 알려 주는 <b>최근 30일 검색 수(PC+모바일)</b>예요. ‘10 미만’으로 나오는 값은 5로 계산하고, 띄어쓰기만 다른 검색어는 한 번만 세요.</li>
       <li><b>추정 검색 수</b> — <span class="formula">그날 지수 × (최근 30일 실제 검색 수 ÷ 최근 30일 지수 합)</span>. 그래서 최근 30일 합계는 실제 검색 수와 같고, 그보다 앞의 값은 같은 비율로 거슬러 계산한 추정치예요.</li>
-      <li><b>기간</b> — 주는 월요일부터 일요일까지예요. 요약·카드·그래프는 다 끝난 기간만 쓰고, 아직 진행 중인 이번 기간은 표에만 ‘진행 중’으로 보여 줘요.</li>
+      <li><b>기간</b> — 주는 월요일부터 일요일까지예요. 요약·카드·그래프는 다 끝난 기간만 써요. 아직 진행 중인 이번 주·이번 달은 끝난 뒤에 나타나요.</li>
       <li><b>갱신</b> — 매일 오전 9시(한국시간)에 자동으로 어제까지의 데이터를 모아요.</li>
     </ol>
   </section>
@@ -589,12 +584,14 @@ function renderCards(){
   if (LOAD_ERROR){ box.innerHTML = ''; box.hidden = true; $('cardsHint').hidden = true; return; }
   box.hidden = false;
   var gs = viewGroups();
-  box.className = 'cards' + (gs.length <= 3 ? ' n' + Math.max(1, gs.length) : '');
-  $('cardsHint').hidden = gs.length < 2;
+  box.className = 'cards';
+  $('cardsHint').hidden = !gs.length;
+  $('dragTip').hidden = gs.length < 2;
   $('resetOrder').hidden = !savedOrder().length;
   var done = allPeriods(state.unit).filter(function(k){ return isDone(k, state.unit); });
   var last = done[done.length-1], prev = done[done.length-2], spark = done.slice(-12);
   var p = pending();
+  $('cardsPeriod').textContent = last ? longLabel(last, state.unit) + ' 기준 · ' + prevWord(state.unit) + ' 대비' : '';
   box.innerHTML = gs.map(function(g){
     var color = colorOf(g.id);
     var head = '<div class="head"><i class="dot" style="background:' + color + '"></i><span class="name">' + esc(g.name) + '</span>' + (g.is_mine && g.name !== '내 브랜드' ? '<span class="mine">내 브랜드</span>' : '');
@@ -625,9 +622,9 @@ function renderCards(){
     return '<button type="button" class="card' + (off ? ' off' : '') + '" data-id="' + esc(g.id) + '" data-toggle="' + esc(g.id) + '" aria-pressed="' + (!off) + '" title="누르면 그래프에서 ' + (off ? '다시 보여요' : '숨겨요') + ' · 끌면 순서를 바꿔요">' +
       head + '<span class="eye">' + (off ? '숨김' : '') + '</span></div>' +
       '<div class="big num">' + fmtVal(v, state.metric) + '<small>' + (state.metric === 'index' ? '지수' : '회') + '</small></div>' +
-      '<div class="row"><span>' + (last ? longLabel(last, state.unit) : '') + '</span>' + badge + (badge ? '<span>' + prevWord(state.unit) + ' 대비</span>' : '') + '</div>' +
+      '<div class="row">' + badge + (badge ? '<span>' + prevWord(state.unit) + ' 대비</span>' : '') + '</div>' +
       sparkSVG(spark.map(function(k){ return valueAt(g.id, k); }), color) +
-      '<div class="kv"><span>최근 30일 검색 수</span><b class="num">' + (dg.monthly_searches != null ? nf.format(dg.monthly_searches) + '회' : '—') + '</b></div>' + mp +
+      '<div class="kv"><span>최근 30일</span><b class="num">' + (dg.monthly_searches != null ? nf.format(dg.monthly_searches) + '회' : '—') + '</b></div>' + mp +
       '</button>';
   }).join('');
 }
@@ -774,7 +771,7 @@ function renderChart(){
 
 /* ---------- 표 ---------- */
 function renderTable(){
-  var wrap = $('tableWrap');
+  var wrap = $('tableWrap'); if (!wrap) return;   // 기간별 표는 화면에서 뺐어요
   if (LOAD_ERROR){ wrap.innerHTML = ''; $('scrollHint').hidden = true; return; }
   var gs = chartGroups();
   var keys = allPeriods(state.unit).slice(-12).reverse();
@@ -801,7 +798,7 @@ function renderTable(){
   wrap.innerHTML = h + '</tbody></table>';
   updateScrollHint();
 }
-function updateScrollHint(){ var w = $('tableWrap'); $('scrollHint').hidden = !(w.scrollWidth > w.clientWidth + 2); }
+function updateScrollHint(){ var w = $('tableWrap'); if (!w) return; $('scrollHint').hidden = !(w.scrollWidth > w.clientWidth + 2); }
 
 /* ---------- 오류 ---------- */
 function renderError(){
