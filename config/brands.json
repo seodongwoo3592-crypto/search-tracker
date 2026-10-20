@@ -11,9 +11,11 @@
     },
     {
       "id": "rival1",
-      "name": "경쟁사1",
+      "name": "엑스노이 패치",
       "is_mine": false,
-      "keywords": []
+      "keywords": [
+        "엑스노이 패치"
+      ]
     },
     {
       "id": "rival2",
