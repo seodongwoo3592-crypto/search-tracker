@@ -753,11 +753,16 @@ function renderChart(){
         legend:{ display:false },
         tooltip:{
           backgroundColor: surface, titleColor: body, bodyColor: body, borderColor: grid, borderWidth:1, padding:12, boxPadding:4, usePointStyle:true,
-          titleFont:{ family:'Pretendard Variable, sans-serif', weight:'700', size:14 }, bodyFont:{ family:'Pretendard Variable, sans-serif', size:14 },
+          titleFont:{ family:'Pretendard Variable, sans-serif', weight:'700', size:14 }, footerColor: body, footerFont:{ family:'Pretendard Variable, sans-serif', weight:'700', size:14 }, footerMarginTop:8, bodyFont:{ family:'Pretendard Variable, sans-serif', size:14 },
           itemSort:function(a,b){ return (b.parsed.y||0) - (a.parsed.y||0); },
           callbacks:{
             title:function(items){ return items.length ? tipLabel(keys[items[0].dataIndex], state.unit) : ''; },
-            label:function(it){ return ' ' + it.dataset.label + '   ' + fmtVal(it.parsed.y, state.metric); }
+            label:function(it){ return ' ' + it.dataset.label + '   ' + fmtVal(it.parsed.y, state.metric); },
+            footer:function(items){
+              if (state.metric !== 'count' || items.length < 2) return '';
+              var sum = 0; items.forEach(function(it){ sum += +it.parsed.y || 0; });
+              return '합계   ' + nf.format(Math.round(sum));
+            }
           }
         }
       },
