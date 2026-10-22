@@ -986,9 +986,10 @@ function listView(){
       (confirming ? '<div class="actions" style="justify-content:flex-start;align-items:center"><span style="font-size:14px;flex:1">' + esc(josa(g.name, '을/를')) + ' 삭제할까요? 지금까지 모은 데이터도 화면에서 사라져요.</span><button type="button" class="btn small" data-act="cancelDel">취소</button><button type="button" class="btn small primary" style="background:#d23b3b;border-color:#d23b3b" data-act="doDel"' + (M.busy ? ' disabled' : '') + '>삭제</button></div>' : '') +
       '</div>';
   }).join('');
-  return '<div><p class="section-title" style="margin-bottom:10px">등록된 브랜드 ' + gs.length + '개</p><div class="brand-list">' + rows + '</div></div>' +
+  // 추가 버튼과 입력 폼을 목록 위에 둔다(브랜드가 많아도 스크롤 없이 바로 추가·수정)
+  return (M.form ? formView() : '<div><button type="button" class="btn primary" data-act="newForm"' + (M.busy ? ' disabled' : '') + '>+ 경쟁사 추가</button></div>') +
     (M.error ? '<div class="formerr">' + M.error + '</div>' : '') +
-    (M.form ? formView() : '<div><button type="button" class="btn primary" data-act="newForm"' + (M.busy ? ' disabled' : '') + '>+ 경쟁사 추가</button></div>');
+    '<div><p class="section-title" style="margin-bottom:10px">등록된 브랜드 ' + gs.length + '개</p><div class="brand-list">' + rows + '</div></div>';
 }
 function renderManager(){
   var body = $('sheetBody'), html;
@@ -1061,7 +1062,7 @@ $('sheetBody').addEventListener('click', function(e){
   else if (act === 'doDel') commitChange({ type:'delete', id:M.confirmDel });
   else if (act === 'submitForm') submitForm();
 });
-function scrollToForm(){ var f = $('brandForm'); if (f && f.scrollIntoView) f.scrollIntoView({ block:'nearest' }); }
+function scrollToForm(){ var body = $('sheetBody'); if (body) body.scrollTop = 0; var f = $('brandForm'); if (f && f.scrollIntoView) f.scrollIntoView({ block:'nearest' }); }
 
 function saveToken(){
   var tok = ($('tokenIn') && $('tokenIn').value || '').trim();
