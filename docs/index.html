@@ -29,7 +29,7 @@ button,input{font:inherit;color:inherit}
 button{cursor:pointer}
 button:disabled{cursor:not-allowed;opacity:.45}
 a{color:var(--accent)}
-.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
+.wrap{max-width:1440px;margin:0 auto;padding:0 24px}
 .num{font-variant-numeric:tabular-nums}
 .muted{color:var(--muted)}
 [hidden]{display:none!important}
@@ -52,7 +52,7 @@ a{color:var(--accent)}
 .btn.ghost{border-color:transparent;background:transparent}
 
 /* 배너 */
-.banner{margin:16px auto 0;max-width:1200px;padding:0 24px}
+.banner{margin:16px auto 0;max-width:1440px;padding:0 24px}
 .banner-in{display:flex;gap:12px;align-items:flex-start;background:var(--accent-soft);border-radius:14px;padding:12px 16px;font-size:15px}
 .banner-in.err{background:var(--err)}
 .banner-in.ok{background:var(--ok)}
@@ -88,8 +88,8 @@ main.wrap{padding-top:24px;padding-bottom:64px;display:flex;flex-direction:colum
 .dot{width:10px;height:10px;border-radius:50%;flex:none;display:inline-block}
 
 /* 카드 */
-.cards{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(max(150px,calc((100% - 5 * 12px) / 6)),1fr))}
-.card{position:relative;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:7px;min-width:0;transition:opacity .2s,border-color .2s}
+.cards{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(max(108px,calc((100% - 8 * 10px) / 9)),1fr))}
+.card{position:relative;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:5px;min-width:0;transition:opacity .2s,border-color .2s}
 button.card{cursor:pointer;width:100%}
 .cards-hint{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;font-size:13px;color:var(--muted);margin:0 0 -14px;min-height:30px}
 .cards-hint .period{font-weight:600;color:var(--text)}
@@ -100,24 +100,28 @@ body.is-dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
 body.is-dragging .card:not(.dragging){transition:transform .15s}
 button.card:hover{border-color:color-mix(in srgb,var(--text) 22%,var(--line))}
 .card.off{opacity:.45}
-.card .head{display:flex;align-items:center;gap:6px;min-width:0}
-.card .name{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.card .mine{font-size:11px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 6px;flex:none;line-height:1.6}
-.card .eye{margin-left:auto;font-size:11px;color:var(--muted);flex:none}
-.card .big{font-size:24px;font-weight:700;line-height:1.15;letter-spacing:-.02em;white-space:nowrap}
-.card .big small{font-size:13px;font-weight:600;margin-left:2px;color:var(--muted)}
-.card .row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
-.card .badge{font-size:12px;padding:1px 7px}
+.card .head{display:flex;align-items:flex-start;gap:5px;min-width:0}
+.card .head .dot{margin-top:4px}
+.card .head .mine,.card .head .eye{margin-top:1px}
+.card .name{font-weight:700;font-size:12.5px;line-height:1.3;overflow:hidden;min-width:0;word-break:keep-all;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.card{container-type:inline-size}
+@container (max-width:124px){ .card .kv{font-size:10px;gap:2px} .card .kv .lb-long{display:none} }
+.card .mine{font-size:10px;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 5px;flex:none;line-height:1.6}
+.card .eye{margin-left:auto;font-size:10px;color:var(--muted);flex:none}
+.card .big{font-size:19px;font-weight:700;line-height:1.15;letter-spacing:-.02em;white-space:nowrap}
+.card .big small{font-size:11px;font-weight:600;margin-left:2px;color:var(--muted)}
+.card .row{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+.card .badge{font-size:11px;padding:0 6px}
 .badge{display:inline-flex;align-items:center;gap:2px;font-size:13px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--text)}
 .badge.up{background:var(--up)}
 .badge.down{background:var(--down)}
-.spark{width:100%;height:30px;display:block}
-.kv{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap}
+.spark{width:100%;height:24px;display:block}
+.kv{display:flex;justify-content:space-between;gap:4px;font-size:11px;color:var(--muted);white-space:nowrap}
 .kv b{color:var(--text);font-weight:600}
-.mpbar{display:flex;height:5px;border-radius:999px;overflow:hidden;background:var(--soft)}
+.mpbar{display:flex;height:4px;border-radius:999px;overflow:hidden;background:var(--soft)}
 .mpbar span{height:100%}
 .card.empty{border-style:dashed;background:transparent;box-shadow:none;align-items:flex-start}
-.card.empty p{margin:0;font-size:12px;color:var(--muted);word-break:keep-all}
+.card.empty p{margin:0;font-size:11px;color:var(--muted);word-break:keep-all}
 .card.collecting .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.4s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
 
@@ -201,8 +205,8 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
   main.wrap{padding-top:16px;gap:16px}
   .panel{padding:18px 16px}
   .summary-text{font-size:18px}
-  .card{padding:12px}
-  .card .big{font-size:22px}
+  .card{padding:9px}
+  .card .big{font-size:18px}
   .cards-hint .drag-tip{margin-left:0}
   .chart-box{height:300px}
   .overlay{align-items:flex-end;padding:0}
@@ -594,7 +598,7 @@ function renderCards(){
   $('cardsPeriod').textContent = last ? longLabel(last, state.unit) + ' 기준 · ' + prevWord(state.unit) + ' 대비' : '';
   box.innerHTML = gs.map(function(g){
     var color = colorOf(g.id);
-    var head = '<div class="head"><i class="dot" style="background:' + color + '"></i><span class="name">' + esc(g.name) + '</span>' + (g.is_mine && g.name !== '내 브랜드' ? '<span class="mine">내 브랜드</span>' : '');
+    var head = '<div class="head"><i class="dot" style="background:' + color + '"></i><span class="name">' + esc(g.name) + '</span>' + (g.is_mine && g.name !== '내 브랜드' ? '<span class="mine" title="내 브랜드">내</span>' : '');
     if (!g.keywords || !g.keywords.length){
       return '<div class="card empty" data-id="' + esc(g.id) + '">' + head + '</div><p>아직 검색어가 없어서 수집하지 않아요.</p>' +
         (DATA.demo ? '' : '<button type="button" class="btn small" data-reg="' + esc(g.id) + '">검색어 등록</button>') + '</div>';
@@ -622,9 +626,9 @@ function renderCards(){
     return '<button type="button" class="card' + (off ? ' off' : '') + '" data-id="' + esc(g.id) + '" data-toggle="' + esc(g.id) + '" aria-pressed="' + (!off) + '" title="누르면 그래프에서 ' + (off ? '다시 보여요' : '숨겨요') + ' · 끌면 순서를 바꿔요">' +
       head + '<span class="eye">' + (off ? '숨김' : '') + '</span></div>' +
       '<div class="big num">' + fmtVal(v, state.metric) + '<small>' + (state.metric === 'index' ? '지수' : '회') + '</small></div>' +
-      '<div class="row">' + badge + (badge ? '<span>' + prevWord(state.unit) + ' 대비</span>' : '') + '</div>' +
+      '<div class="row">' + badge + '</div>' +
       sparkSVG(spark.map(function(k){ return valueAt(g.id, k); }), color) +
-      '<div class="kv"><span>최근 30일</span><b class="num">' + (dg.monthly_searches != null ? nf.format(dg.monthly_searches) + '회' : '—') + '</b></div>' + mp +
+      '<div class="kv"><span><span class="lb-long">최근 </span>30일</span><b class="num">' + (dg.monthly_searches != null ? nf.format(dg.monthly_searches) + '회' : '—') + '</b></div>' + mp +
       '</button>';
   }).join('');
 }
