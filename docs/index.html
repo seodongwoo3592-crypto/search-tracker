@@ -255,14 +255,6 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
 <main class="wrap">
   <section id="errorPanel" class="panel err-panel" hidden></section>
 
-  <section id="summaryPanel" class="panel" aria-live="polite">
-    <p id="summaryText" class="summary-text">데이터를 불러오는 중이에요.</p>
-    <p id="summaryNote" class="summary-note" hidden></p>
-    <div id="share" class="share" hidden>
-      <div id="shareBar" class="share-bar" role="img"></div>
-      <div id="shareLegend" class="share-legend"></div>
-    </div>
-  </section>
 
   <div id="cardsHint" class="cards-hint" hidden><span id="cardsPeriod" class="period"></span><span id="dragTip" class="drag-tip">끌어서 순서 바꾸기 · 폰은 길게 누른 뒤 끌기</span><button id="resetOrder" type="button" class="btn small ghost" hidden>원래 순서로</button></div>
   <section id="cards" class="cards" aria-label="브랜드 카드"></section>
@@ -282,7 +274,7 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
       <li><b>트렌드 지수</b> — 네이버 데이터랩 검색어 트렌드 값이에요. 데이터랩과 같은 방식으로, <b>선택한 기간 안에서 그 브랜드가 가장 많이 검색된 일·주·월을 100</b>으로 둔 상대값이에요. 기간이나 단위를 바꾸면 100의 기준도 함께 바뀌어요. 브랜드마다 따로 계산해서 브랜드끼리 크기를 견줄 수는 없고 각자의 흐름만 볼 수 있어요. 응답에 값이 없는 날은 0으로 채워요.</li>
       <li><b>실제 검색 수</b> — 네이버 검색광고 키워드 도구가 알려 주는 <b>최근 30일 검색 수(PC+모바일)</b>예요. ‘10 미만’으로 나오는 값은 5로 계산하고, 띄어쓰기만 다른 검색어는 한 번만 세요.</li>
       <li><b>추정 검색 수</b> — <span class="formula">그날 지수 × (최근 30일 실제 검색 수 ÷ 최근 30일 지수 합)</span>. 그래서 최근 30일 합계는 실제 검색 수와 같고, 그보다 앞의 값은 같은 비율로 거슬러 계산한 추정치예요.</li>
-      <li><b>기간</b> — 주는 월요일부터 일요일까지예요. 요약·카드·그래프는 다 끝난 기간만 써요. 아직 진행 중인 이번 주·이번 달은 끝난 뒤에 나타나요.</li>
+      <li><b>기간</b> — 주는 월요일부터 일요일까지예요. 카드·그래프는 다 끝난 기간만 써요. 아직 진행 중인 이번 주·이번 달은 끝난 뒤에 나타나요.</li>
       <li><b>갱신</b> — 매일 오전 9시(한국시간)에 자동으로 어제까지의 데이터를 모아요.</li>
     </ol>
   </section>
@@ -530,6 +522,7 @@ function lastDone(){
   return ks.length ? ks[ks.length-1] : null;
 }
 function renderSummary(){
+  if (!$('summaryPanel')) return;   // 요약·점유율 칸은 화면에서 뺐어요
   var txt = $('summaryText'), note = $('summaryNote'), share = $('share');
   note.hidden = true; share.hidden = true;
   if (LOAD_ERROR){ $('summaryPanel').hidden = true; return; }
