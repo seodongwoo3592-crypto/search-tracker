@@ -2,7 +2,9 @@ name: 네이버 검색량 수집
 
 on:
   schedule:
-    - cron: "0 0 * * *"   # 매일 한국시간 오전 9시
+    # 데이터랩은 어제 값을 오늘 오전 8~10시쯤 반영해서, 그 뒤에 두 번 모아요.
+    - cron: "10 1 * * *"   # 매일 한국시간 오전 10시 10분
+    - cron: "10 4 * * *"   # 매일 한국시간 오후 1시 10분 (앞에서 못 받은 값 채우기)
   workflow_dispatch:
 
 permissions:
@@ -17,9 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
