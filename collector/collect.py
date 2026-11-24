@@ -11,6 +11,7 @@
 import base64
 import hashlib
 import hmac
+import http.client as httplib
 import json
 import os
 import sys
@@ -32,6 +33,7 @@ SEARCHAD_BASE = (os.environ.get("SEARCHAD_BASE_URL") or "https://api.searchad.na
 SEARCHAD_URI = "/keywordstool"
 
 errors = []
+warnings = []
 
 
 def log(msg):
@@ -41,6 +43,11 @@ def log(msg):
 def fail(msg):
     errors.append(msg)
     print("::error::" + msg.replace("\n", " "), flush=True)
+
+
+def warn(msg):
+    warnings.append(msg)
+    print("::warning::" + msg.replace("\n", " "), flush=True)
 
 
 def env(name):
@@ -85,10 +92,11 @@ def http(method, url, headers, body=None, tries=4):
                 time.sleep(2 * (attempt + 1))
                 continue
             raise last
-        except (urllib.error.URLError, TimeoutError) as e:
+        except (urllib.error.URLError, TimeoutError, ConnectionError, httplib.HTTPException, OSError) as e:
+            # 서버가 응답 없이 연결을 끊는 경우(Remote end closed connection 등)도 잠깐 쉬고 다시 시도
             last = RuntimeError("연결 실패: %s" % e)
             if attempt < tries - 1:
-                time.sleep(2 * (attempt + 1))
+                time.sleep(3 * (attempt + 1))
                 continue
             raise last
     raise last
@@ -130,7 +138,11 @@ def fetch_trend(url, group, start, end):
     if results:
         for row in results[0].get("data") or []:
             got[row["period"]] = float(row.get("ratio") or 0)
-    # 응답에 없는 날은 0
+    return got
+
+
+def fill_days(got, start, end):
+    """응답에 없는 날은 0으로 채운다(단, end 까지만)."""
     return [(d.isoformat(), round(got.get(d.isoformat(), 0.0), 5)) for d in daterange(start, end)]
 
 
@@ -147,41 +159,75 @@ def to_count(v):
         return 0
 
 
-def searchad_request(keywords):
+def searchad_request(keywords, tries=4):
+    """검색광고 키워드도구 호출. 다시 시도할 때마다 서명(타임스탬프)을 새로 만든다."""
     api_key, secret, customer = env("SEARCHAD_API_KEY"), env("SEARCHAD_SECRET"), env("SEARCHAD_CUSTOMER_ID")
-    ts = str(int(time.time() * 1000))
-    msg = "%s.GET.%s" % (ts, SEARCHAD_URI)
-    sig = base64.b64encode(hmac.new(secret.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).digest()).decode()
     qs = urllib.parse.urlencode({"hintKeywords": ",".join(keywords), "showDetail": "1"})
-    headers = {"X-Timestamp": ts, "X-API-KEY": api_key, "X-Customer": customer, "X-Signature": sig}
-    return http("GET", "%s%s?%s" % (SEARCHAD_BASE, SEARCHAD_URI, qs), headers)
+    last = None
+    for attempt in range(tries):
+        ts = str(int(time.time() * 1000))
+        msg = "%s.GET.%s" % (ts, SEARCHAD_URI)
+        sig = base64.b64encode(hmac.new(secret.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).digest()).decode()
+        headers = {"X-Timestamp": ts, "X-API-KEY": api_key, "X-Customer": customer, "X-Signature": sig}
+        try:
+            return http("GET", "%s%s?%s" % (SEARCHAD_BASE, SEARCHAD_URI, qs), headers, tries=1)
+        except RuntimeError as e:
+            last = e
+            text = str(e)
+            # 키·서명 오류(401/403)는 다시 해도 같으니 바로 멈춘다
+            if text.startswith("HTTP 401") or text.startswith("HTTP 403") or text.startswith("HTTP 400"):
+                raise
+            if attempt < tries - 1:
+                time.sleep(3 * (attempt + 1))
+    raise last
+
+
+def parse_searchad(res, wanted, out):
+    for row in res.get("keywordList") or []:
+        n = norm(row.get("relKeyword", ""))
+        if n in wanted:
+            out[n] = {"pc": to_count(row.get("monthlyPcQcCnt")),
+                      "mobile": to_count(row.get("monthlyMobileQcCnt"))}
+    for n in wanted:
+        if n not in out:
+            out[n] = {"pc": 0, "mobile": 0}  # 결과에 없으면 검색이 거의 없는 검색어
 
 
 def fetch_searchad(all_keywords):
-    """{정규화 검색어: {pc, mobile}} 반환. 못 얻은 검색어는 빠진다."""
+    """({정규화 검색어: {pc, mobile}}, {실패한 검색어: 오류}) 반환.
+    5개씩 묶어 부르고, 묶음이 실패하면 한 개씩 다시 부른다."""
     uniq = []
     for kw in all_keywords:
         n = norm(kw)
         if n and n not in uniq:
             uniq.append(n)
-    out = {}
+    out, failed = {}, {}
     for i in range(0, len(uniq), 5):
         chunk = uniq[i:i + 5]
         try:
-            res = searchad_request(chunk)
+            parse_searchad(searchad_request(chunk), chunk, out)
         except Exception as e:  # noqa: BLE001
-            fail("검색광고 조회 실패 (%s): %s" % (", ".join(chunk), e))
-            continue
-        for row in res.get("keywordList") or []:
-            n = norm(row.get("relKeyword", ""))
-            if n in chunk:
-                out[n] = {"pc": to_count(row.get("monthlyPcQcCnt")),
-                          "mobile": to_count(row.get("monthlyMobileQcCnt"))}
-        for n in chunk:
-            if n not in out:
-                out[n] = {"pc": 0, "mobile": 0}  # 결과에 없으면 검색이 거의 없는 검색어
-        time.sleep(0.3)
-    return out
+            log("· 검색광고 묶음 조회 실패, 한 개씩 다시 시도 (%s): %s" % (", ".join(chunk), e))
+            for n in chunk:
+                time.sleep(0.5)
+                try:
+                    parse_searchad(searchad_request([n]), [n], out)
+                except Exception as e2:  # noqa: BLE001
+                    failed[n] = str(e2)
+        time.sleep(0.5)
+    return out, failed
+
+
+def last_known_searchad():
+    """searchad_snapshots.json 에서 검색어별 가장 최근 값을 꺼낸다(오늘 조회가 실패했을 때 대신 쓰기)."""
+    snaps = load_json(SNAP_PATH, {})
+    known = {}
+    for day in sorted(snaps):
+        for kwmap in (snaps.get(day) or {}).values():
+            for kw, v in (kwmap or {}).items():
+                if isinstance(v, dict) and "pc" in v and "mobile" in v:
+                    known[norm(kw)] = {"pc": int(v["pc"]), "mobile": int(v["mobile"]), "date": day}
+    return known
 
 
 # ---------------------------------------------------------------- 메인
@@ -223,7 +269,7 @@ def main():
                        "is_mine": bool(g.get("is_mine")), "keywords": kws[:20]})
 
     # 1) 트렌드 지수
-    trend = {}
+    raw = {}
     for g in groups:
         if not g["keywords"]:
             log("· %s: 검색어가 없어 건너뜀" % g["name"])
@@ -231,22 +277,33 @@ def main():
         if not has_trend_key:
             continue
         try:
-            trend[g["id"]] = fetch_trend(url, g, start, end)
-            log("· %s: 트렌드 %d일 수집" % (g["name"], len(trend[g["id"]])))
+            raw[g["id"]] = fetch_trend(url, g, start, end)
+            log("· %s: 트렌드 %d일 받음" % (g["name"], len(raw[g["id"]])))
         except Exception as e:  # noqa: BLE001
             fail("트렌드 조회 실패 (%s): %s" % (g["name"], e))
         time.sleep(0.2)
 
+    # 데이터랩은 어제 값을 오늘 오전(8~10시간 뒤)에 반영한다. 아직 안 나온 날을 0으로 채우지 않도록
+    # 모든 브랜드 중 실제로 값이 온 마지막 날짜까지만 저장한다.
+    last_days = [max(got) for got in raw.values() if got]
+    if last_days:
+        data_end = date.fromisoformat(max(last_days))
+        if data_end < end:
+            log("· 데이터랩에 %s 값이 아직 없어 %s 까지만 저장해요(다음 수집 때 채워져요)." % (end.isoformat(), data_end.isoformat()))
+            end = max(data_end, start)
+    trend = {gid: fill_days(got, start, end) for gid, got in raw.items()}
+
     # 2) 검색광고
-    ad = {}
+    ad, ad_failed, known = {}, {}, {}
     if has_ad_key:
         all_kw = [k for g in groups for k in g["keywords"]]
         if all_kw:
-            ad = fetch_searchad(all_kw)
+            ad, ad_failed = fetch_searchad(all_kw)
+            known = last_known_searchad()
 
     # 3) 합치기
     last30_from = (end - timedelta(days=29)).isoformat()
-    out_groups, series = [], {}
+    out_groups, series, fresh = [], {}, {}
     for g in groups:
         item = dict(g, monthly_searches=None, scale=None, searchad={})
         rows = trend.get(g["id"])
@@ -262,13 +319,22 @@ def main():
             out_groups.append(item)
             continue
 
-        counted, pc, mobile, have_all = set(), 0, 0, bool(ad)
+        counted, pc, mobile, have_all = set(), 0, 0, bool(ad or known)
+        fresh[g["id"]] = {}
         for kw in g["keywords"]:
             n = norm(kw)
             if n in counted:
                 continue
             counted.add(n)
             v = ad.get(n)
+            if v is not None:
+                fresh[g["id"]][kw] = v
+            elif n in ad_failed and n in known:
+                k = known[n]
+                v = {"pc": k["pc"], "mobile": k["mobile"]}
+                warn("검색광고 조회 실패로 '%s'은(는) %s 값을 대신 썼어요 (%s)" % (kw, k["date"], ad_failed[n][:200]))
+            elif n in ad_failed:
+                fail("검색광고 조회 실패 (%s): %s" % (kw, ad_failed[n][:300]))
             if v is None:
                 have_all = False
                 continue
@@ -302,10 +368,14 @@ def main():
 
     if ad:
         snaps = load_json(SNAP_PATH, {})
-        snaps[today.isoformat()] = {g["id"]: g["searchad"] for g in out_groups if g["searchad"]}
+        snaps[today.isoformat()] = {gid: m for gid, m in fresh.items() if m}  # 오늘 실제로 받은 값만 쌓는다
         save_json(SNAP_PATH, dict(sorted(snaps.items())))
         log("searchad_snapshots.json 저장 완료")
 
+    if warnings:
+        log("\n참고 %d건(수집은 정상 저장):" % len(warnings))
+        for w in warnings:
+            log(" - " + w)
     if errors:
         log("\n실패 %d건:" % len(errors))
         for e in errors:
