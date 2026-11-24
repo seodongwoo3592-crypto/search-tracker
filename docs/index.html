@@ -275,7 +275,7 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
       <li><b>실제 검색 수</b> — 네이버 검색광고 키워드 도구가 알려 주는 <b>최근 30일 검색 수(PC+모바일)</b>예요. ‘10 미만’으로 나오는 값은 5로 계산하고, 띄어쓰기만 다른 검색어는 한 번만 세요.</li>
       <li><b>추정 검색 수</b> — <span class="formula">그날 지수 × (최근 30일 실제 검색 수 ÷ 최근 30일 지수 합)</span>. 그래서 최근 30일 합계는 실제 검색 수와 같고, 그보다 앞의 값은 같은 비율로 거슬러 계산한 추정치예요.</li>
       <li><b>기간</b> — 주는 월요일부터 일요일까지예요. 카드·그래프는 다 끝난 기간만 써요. 아직 진행 중인 이번 주·이번 달은 끝난 뒤에 나타나요.</li>
-      <li><b>갱신</b> — 매일 오전 9시(한국시간)에 자동으로 어제까지의 데이터를 모아요.</li>
+      <li><b>갱신</b> — 매일 오전 10시 10분과 오후 1시 10분(한국시간)에 자동으로 어제까지의 데이터를 모아요. 네이버 데이터랩이 어제 값을 오전 8~10시쯤 내놓기 때문이에요. GitHub 사정으로 늦어지는 날에는, 오전 10시 이후 대시보드를 열면(브랜드 관리 토큰이 있는 브라우저) 대시보드가 직접 수집을 시작해요.</li>
     </ol>
   </section>
 </main>
@@ -294,7 +294,7 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
 
 /* ---------- 기본값 ---------- */
 var PALETTE = ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#6250d6','#e34948'];
-var LS = { unit:'st_unit', range:'st_range', metric:'st_metric', hidden:'st_hidden', token:'st_token', repo:'st_repo', pending:'st_pending', order:'st_order' };
+var LS = { unit:'st_unit', range:'st_range', metric:'st_metric', hidden:'st_hidden', token:'st_token', repo:'st_repo', pending:'st_pending', order:'st_order', autorun:'st_autorun' };
 var WORKFLOW = 'collect.yml';
 var POLL_MS = 15000;
 var MAX_KW = 20;
@@ -533,7 +533,7 @@ function renderSummary(){
     txt.textContent = DATA.updated_at ? '아직 보여 줄 데이터가 없어요.' : '아직 첫 수집 전이에요.';
     note.hidden = false;
     note.textContent = viewGroups().some(function(g){ return g.keywords && g.keywords.length; })
-      ? '수집이 끝나면 여기에 요약이 나와요. 매일 오전 9시에 자동으로 모아요.'
+      ? '수집이 끝나면 여기에 요약이 나와요. 매일 오전 10시쯤 자동으로 모아요.'
       : '‘+ 브랜드 관리’에서 브랜드와 검색어를 등록하면 수집을 시작해요.';
     return;
   }
@@ -1110,7 +1110,7 @@ function commitChange(ch, retried){
     aggCache = {}; peakCache = {}; renderAll();
     banner('info', '설정을 저장했어요. 수집을 시작하는 중이에요…', { spin:true });
     return gh('POST', '/actions/workflows/' + WORKFLOW + '/dispatches', { ref:'main' }).then(function(){ return true; }, function(e){
-      banner('warn', '설정은 저장했지만 수집을 바로 시작하지 못했어요. ' + esc(e.message) + ' 내일 오전 9시 자동 수집 때 반영되거나, <a href="' + esc(repoUrl()) + '/actions" target="_blank" rel="noopener">Actions</a>에서 직접 실행할 수 있어요.', { close:true });
+      banner('warn', '설정은 저장했지만 수집을 바로 시작하지 못했어요. ' + esc(e.message) + ' 다음 자동 수집(오전 10시·오후 1시) 때 반영되거나, <a href="' + esc(repoUrl()) + '/actions" target="_blank" rel="noopener">Actions</a>에서 직접 실행할 수 있어요.', { close:true });
       var p = pending(); if (p){ p.noRun = true; lsSet(LS.pending, JSON.stringify(p)); }
       return false;
     });
@@ -1131,7 +1131,7 @@ function commitChange(ch, retried){
 function startPolling(immediate){
   if (pollTimer) clearTimeout(pollTimer);
   var p = pending(); if (!p || p.done) return;
-  if (!p.noRun) banner('info', '새 설정으로 수집 중이에요. 보통 1~3분 걸리고, 끝나면 화면이 자동으로 바뀌어요. 이 창을 닫거나 새로고침해도 괜찮아요.', { spin:true });
+  if (!p.noRun) banner('info', (p.auto ? '어제 검색량이 아직 없어서 수집을 바로 시작했어요.' : '새 설정으로 수집 중이에요.') + ' 보통 1~3분 걸리고, 끝나면 화면이 자동으로 바뀌어요. 이 창을 닫거나 새로고침해도 괜찮아요.', { spin:true });
   pollTimer = setTimeout(pollOnce, immediate ? 4000 : 500);
 }
 function pollOnce(){
@@ -1183,6 +1183,39 @@ function pollOnce(){
   }).catch(function(){ pollTimer = setTimeout(pollOnce, POLL_MS); });
 }
 
+/* ---------- 어제 값이 없으면 대시보드가 직접 수집 시작 ----------
+   GitHub 예약 실행은 몇 시간씩 늦을 때가 있어서, 오전 10시 이후 대시보드를 열었는데
+   어제 값이 없으면(토큰이 있는 브라우저에서만) 수집을 바로 실행한다. 30분에 한 번만 시도. */
+function kstNow(){ return new Date(Date.now() + 9*3600*1000); }
+function autoCollectIfStale(){
+  try {
+    if (!DATA || DATA.demo || !lsGet(LS.token) || !detectRepo()) return;
+    var now = kstNow();
+    if (now.getUTCHours() < 10) return;                       // 데이터랩은 오전 8~10시쯤 어제 값을 내놓음
+    var y = new Date(now.getTime()); y.setUTCDate(y.getUTCDate() - 1);
+    var yesterday = iso(y);
+    var end = DATA.range && DATA.range[1];
+    if (end && end >= yesterday) return;                      // 이미 어제까지 있음
+    var last = +(lsGet(LS.autorun) || 0);
+    if (Date.now() - last < 30 * 60000) return;               // 30분 안에 이미 시도함
+    lsSet(LS.autorun, String(Date.now()));
+    // 이미 돌고 있는 수집이 있으면 새로 시작하지 않고 그걸 기다린다
+    gh('GET', '/actions/workflows/' + WORKFLOW + '/runs?per_page=5').then(function(j){
+      var running = ((j && j.workflow_runs) || []).filter(function(r){ return r.status !== 'completed'; });
+      var busy = running.length > 0;
+      var since = busy ? running[running.length - 1].created_at : new Date().toISOString();
+      var go = function(){
+        lsSet(LS.pending, JSON.stringify({ since: since, groups: (DATA.groups || []), runId: null, done: false, auto: true }));
+        startPolling(true);
+      };
+      if (busy) { go(); return; }
+      return gh('POST', '/actions/workflows/' + WORKFLOW + '/dispatches', { ref:'main' }).then(go);
+    }).catch(function(e){
+      banner('warn', '어제 검색량이 아직 없어 수집을 시작하려 했지만 실패했어요. ' + esc(e && e.message ? e.message : '') + ' <a href="' + esc(repoUrl()) + '/actions" target="_blank" rel="noopener">Actions</a>에서 직접 실행할 수 있어요.', { close:true });
+    });
+  } catch(e){}
+}
+
 /* ---------- 시작 ---------- */
 var stickyObs = $('controls');
 window.addEventListener('scroll', function(){ stickyObs.classList.toggle('stuck', stickyObs.getBoundingClientRect().top <= 0 && window.scrollY > 10); }, { passive:true });
@@ -1196,7 +1229,7 @@ fetchData(false).then(function(d){
   if (!d.demo){
     var p = pending();
     if (p && !p.done) startPolling(false);
-    else if (p && p.done) lsSet(LS.pending, null);
+    else { if (p && p.done) lsSet(LS.pending, null); autoCollectIfStale(); }
   }
 }, function(e){
   DATA = null; LOAD_ERROR = '데이터 파일을 읽지 못했어요 (' + (e && e.message ? e.message : '알 수 없는 오류') + ').';
