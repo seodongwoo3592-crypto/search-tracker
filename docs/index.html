@@ -94,6 +94,8 @@ button.card{cursor:pointer;width:100%}
 .cards-hint{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;font-size:13px;color:var(--muted);margin:0 0 -14px;min-height:30px}
 .cards-hint .period{font-weight:600;color:var(--text)}
 .cards-hint .drag-tip{margin-left:auto}
+.cards-hint .fold{margin-left:auto;font-weight:600}
+.cards-hint .drag-tip:not([hidden]) ~ .fold{margin-left:0}
 .card{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .card.dragging{z-index:40;cursor:grabbing;box-shadow:0 14px 34px rgba(0,0,0,.18);border-color:color-mix(in srgb,var(--text) 30%,var(--line));opacity:.97;transition:none}
 body.is-dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
@@ -256,7 +258,7 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
   <section id="errorPanel" class="panel err-panel" hidden></section>
 
 
-  <div id="cardsHint" class="cards-hint" hidden><span id="cardsPeriod" class="period"></span><span id="dragTip" class="drag-tip">끌어서 순서 바꾸기 · 폰은 길게 누른 뒤 끌기</span><button id="resetOrder" type="button" class="btn small ghost" hidden>원래 순서로</button></div>
+  <div id="cardsHint" class="cards-hint" hidden><span id="cardsPeriod" class="period"></span><span id="dragTip" class="drag-tip">끌어서 순서 바꾸기 · 폰은 길게 누른 뒤 끌기</span><button id="resetOrder" type="button" class="btn small ghost" hidden>원래 순서로</button><button id="foldCards" type="button" class="btn small ghost fold" aria-controls="cards" aria-expanded="true">카드 접기 ▲</button></div>
   <section id="cards" class="cards" aria-label="브랜드 카드"></section>
 
   <section class="panel">
@@ -294,7 +296,7 @@ tr.live td:first-child{background:color-mix(in srgb,var(--accent-soft) 60%,var(-
 
 /* ---------- 기본값 ---------- */
 var PALETTE = ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#6250d6','#e34948'];
-var LS = { unit:'st_unit', range:'st_range', metric:'st_metric', hidden:'st_hidden', token:'st_token', repo:'st_repo', pending:'st_pending', order:'st_order', autorun:'st_autorun' };
+var LS = { unit:'st_unit', range:'st_range', metric:'st_metric', hidden:'st_hidden', token:'st_token', repo:'st_repo', pending:'st_pending', order:'st_order', autorun:'st_autorun', fold:'st_cards_folded' };
 var WORKFLOW = 'collect.yml';
 var POLL_MS = 15000;
 var MAX_KW = 20;
@@ -579,12 +581,16 @@ function sparkSVG(values, color){
 function renderCards(){
   var box = $('cards');
   if (LOAD_ERROR){ box.innerHTML = ''; box.hidden = true; $('cardsHint').hidden = true; return; }
-  box.hidden = false;
   var gs = viewGroups();
+  var folded = lsGet(LS.fold) === '1';
+  box.hidden = folded;
   box.className = 'cards';
   $('cardsHint').hidden = !gs.length;
-  $('dragTip').hidden = gs.length < 2;
-  $('resetOrder').hidden = !savedOrder().length;
+  $('dragTip').hidden = folded || gs.length < 2;
+  $('resetOrder').hidden = folded || !savedOrder().length;
+  var fb = $('foldCards');
+  fb.textContent = folded ? '카드 펼치기 ▼ (' + gs.length + '개)' : '카드 접기 ▲';
+  fb.setAttribute('aria-expanded', folded ? 'false' : 'true');
   var done = allPeriods(state.unit).filter(function(k){ return isDone(k, state.unit); });
   var last = done[done.length-1], prev = done[done.length-2], spark = done.slice(-12);
   var p = pending();
@@ -707,6 +713,7 @@ document.addEventListener('touchmove', function(e){ if (drag && drag.started) e.
 document.addEventListener('contextmenu', function(e){ if (drag) e.preventDefault(); });
 document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && drag && drag.started) endDrag(true); });
 $('resetOrder').addEventListener('click', function(){ lsSet(LS.order, null); renderAll(); });
+$('foldCards').addEventListener('click', function(){ lsSet(LS.fold, lsGet(LS.fold) === '1' ? null : '1'); renderCards(); });
 
 /* ---------- 그래프 ---------- */
 function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
